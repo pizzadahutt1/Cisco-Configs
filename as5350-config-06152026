@@ -1,0 +1,193 @@
+
+!
+! Last configuration change at 14:42:17 UTC Mon Jun 15 2026
+! NVRAM config last updated at 14:44:33 UTC Mon Jun 15 2026
+!
+version 12.4
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname AS5350
+!
+boot-start-marker
+boot system flash flash:c5350-js-mz.124-25a.bin
+no boot startup-test
+boot-end-marker
+!
+!
+!
+!
+resource-pool disable
+aaa new-model
+!
+!
+aaa authentication ppp default local
+aaa authorization network default local 
+!
+aaa attribute list cghmnclients
+ attribute type addr-pool "CGHMN_USERS"
+!
+aaa attribute list localclients
+ attribute type addr-pool "LOCAL_USERS"
+!
+aaa attribute list internetclients
+ attribute type addr-pool "DIALUP_USERS"
+!
+aaa session-id common
+spe default-firmware spe-firmware-1
+!
+!
+ip cef
+ip name-server 8.8.8.8
+ip name-server 8.8.4.4
+!
+!
+multilink virtual-template 1
+multilink bundle-name both
+isdn switch-type primary-5ess
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+username dialupuser1 password 0 dialup
+username dialupuser1 aaa attribute list internetclients
+username dialupuser2 password 0 dialup
+username dialupuser2 aaa attribute list internetclients
+username dialupuser3 password 0 dialup
+username dialupuser3 aaa attribute list internetclients
+username dialupuser4 password 0 dialup
+username dialupuser4 aaa attribute list internetclients
+username xxx password 0 xxx
+username xxx password 0 xxx
+username xxx aaa attribute list localclients
+username xxx password 0 xxx
+username xxx aaa attribute list localclients
+!
+!
+controller T1 3/0
+ framing esf
+ linecode b8zs
+ cablelength short 133
+ pri-group timeslots 1-24
+!
+controller T1 3/1
+ framing sf
+ linecode ami
+!
+!
+!
+interface Loopback0
+ ip address xxx.xxx.xxx.xxx 255.255.255.0
+!
+interface Loopback1
+ ip address xxx.xxx.xxx.xxx 255.255.255.0
+!
+interface Loopback2
+ ip address xxx.xxx.xxx.xxx 255.255.255.0
+!
+interface FastEthernet0/0
+ ip address xxx.xxx.xxx.xxx 255.255.255.0
+ ip nat outside
+ ip virtual-reassembly
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/1
+ no ip address
+ shutdown
+ duplex auto
+ speed auto
+!
+interface Serial0/0
+ no ip address
+ shutdown
+ clock rate 2000000
+!
+interface Serial0/1
+ no ip address
+ shutdown
+ clock rate 2000000
+!
+interface Serial3/0:23
+ no ip address
+ encapsulation ppp
+ isdn switch-type primary-5ess
+ isdn incoming-voice modem
+!
+interface Virtual-Template1
+ ip unnumbered FastEthernet0/0
+ ip access-group DIALUP_ISOLATION in
+ ip nat inside
+ ip virtual-reassembly
+ ppp multilink
+ ppp multilink fragment delay 240 (this requires some testing to determine which value works best. Establish a multilink connection, begin a download, and you can change this value on the fly and watch the download speed. It reaches a point of diminishing returns)
+!
+interface Group-Async0
+ no ip address
+ encapsulation slip
+ no group-range
+!
+interface Group-Async1
+ ip unnumbered FastEthernet0/0
+ ip access-group DIALUP_ISOLATION in
+ ip nat inside
+ ip virtual-reassembly
+ encapsulation ppp
+ async mode interactive
+ ppp authentication pap chap
+ ppp multilink
+ group-range 1/00 1/59
+!
+ip local pool DIALUP_USERS xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx
+ip local pool LOCAL_USERS xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx
+ip local pool CGHMN_USERS xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx
+ip forward-protocol nd
+ip route 0.0.0.0 0.0.0.0 xxx.xxx.xxx.xxx
+!
+no ip http server
+!
+ip nat inside source list 1 interface FastEthernet0/0 overload
+!
+!
+ip access-list extended DIALUP_ISOLATION
+ xxx
+!
+!
+!
+!
+control-plane
+!
+!
+!
+voice-port 3/0:D
+!
+!
+!
+!
+ss7 mtp2-variant Bellcore 0
+ss7 mtp2-variant Bellcore 1
+ss7 mtp2-variant Bellcore 2
+ss7 mtp2-variant Bellcore 3
+!
+line con 0
+ speed 4800
+line aux 0
+line vty 0 4
+line 1/00 1/59
+ modem InOut
+ no exec
+ autoselect ppp
+!
+ntp clock-period 17179685
+ntp server 162.159.200.1
+end

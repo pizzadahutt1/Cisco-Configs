@@ -1,0 +1,741 @@
+
+!
+! Last configuration change at 17:52:00 EDT Wed Jun 10 2026 by xxx
+! NVRAM config last updated at 17:56:48 EDT Wed Jun 10 2026 by xxx
+! NVRAM config last updated at 17:56:48 EDT Wed Jun 10 2026 by xxx
+version 15.1
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname C3825
+!
+boot-start-marker
+boot-end-marker
+!
+!
+card type t1 0 3
+!
+aaa new-model
+!
+!
+aaa authentication ppp default if-needed local
+aaa authorization exec default local 
+aaa authorization network default local 
+!
+!
+!
+!
+!
+aaa session-id common
+!
+clock timezone EST -5 0
+clock summer-time EDT recurring
+network-clock-participate wic 3 
+!
+dot11 syslog
+ip source-route
+!
+ip cef
+!
+!
+ip dhcp excluded-address xxx.xxx.xxx.xxx
+ip dhcp excluded-address xxx.xxx.xxx.xxx
+ip dhcp excluded-address xxx.xxx.xxx.xxx
+!
+ip dhcp pool dialup
+ network xxx.xxx.xxx.xxx 255.255.255.0
+ dns-server 8.8.8.8 8.8.4.4 
+ default-router xxx.xxx.xxx.xxx 
+!
+ip dhcp pool xxx
+ network xxx.xxx.xxx.xxx 255.255.255.0
+ default-router xxx.xxx.xxx.xxx 
+ dns-server 8.8.8.8 8.8.4.4 
+ option 150 ip xxx.xxx.xxx.xxx (where tftp server is hosted with firmware for cisco IP Phones, in this case, it is the router itself)
+!
+!
+ip multicast-routing 
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+isdn switch-type primary-5ess
+!
+voice-card 0
+!
+!
+!
+voice service pots
+ fax rate disable 
+!
+voice service voip
+ ip address trusted list
+  ipv4 xxx.xxx.xxx.xxx (voip.ms server ip)
+ ip address trusted call-block cause not-in-cug
+ gcid
+ clid substitute name
+ allow-connections h323 to sip (these three allow-connections are probably not necessary, added during troubleshooting)
+ allow-connections sip to h323
+ allow-connections sip to sip
+ no supplementary-service sip moved-temporarily
+ no supplementary-service sip refer
+ fax protocol none (required to get more than 1200bps dialup connections over sip)
+ no fax-relay sg3-to-g3 (might not be required, added during troubleshooting)
+ modem passthrough nse codec g711ulaw (required to get more than 1200bps dialup connections over sip)
+ sip
+  session refresh
+  e911
+  asserted-id ppi
+  localhost dns:xxx.xxx.xxx
+  midcall-signaling passthru
+  sip-profiles 100
+  no call service stop
+!
+voice class codec 1
+ codec preference 1 g711ulaw (probably not required, but not a bad idea)
+!
+!
+!
+!
+voice translation-rule 9
+ rule 1 /^9\(.*\)/ /\1/ (strips out leading 9 from dialed phone number to route call externally)
+!
+!
+voice translation-profile OUTGOING_9
+ translate called 9
+!
+!
+crypto pki token default removal timeout 0
+!
+!
+!
+!
+license udi pid CISCO3825 sn xxx
+username xxx privilege 15 password 0 xxx
+username xxx privilege 15 password 0 xxx
+username xxx privilege 15 password 0 xxx
+!
+redundancy
+!
+!
+controller T1 0/3/0
+ clock source internal
+ cablelength short 110
+ pri-group timeslots 1-24
+!
+controller T1 0/3/1
+ cablelength long 0db
+!
+! 
+!
+!
+!
+!
+!
+!
+!
+interface Loopback0
+ ip address xxx.xxx.xxx.xxx 255.255.255.0 (3825 dialup clients get tied to this interface)
+!
+interface Loopback1
+ ip address xxx.xxx.xxx.xxx 255.255.255.255 (public IP address - required to get sip connection working. Without, router will drop sip packets as they are addressed to the public IP, upstream router sends them here but the cisco drops them without this)
+!
+interface GigabitEthernet0/0
+ description Upstream Router
+ ip address dhcp
+ ip nat outside
+ ip virtual-reassembly in
+ duplex auto
+ speed auto
+ media-type rj45
+!
+interface GigabitEthernet0/1
+ ip address xxx.xxx.xxx.xxx 255.255.255.0
+ ip pim dense-mode
+ ip nat inside
+ ip virtual-reassembly in
+ duplex auto
+ speed auto
+ media-type rj45
+!
+interface Serial0/3/0:23
+ no ip address
+ encapsulation ppp
+ isdn switch-type primary-5ess
+ isdn protocol-emulate network
+ isdn incoming-voice voice
+!
+interface Async0/0/0
+ ip unnumbered Loopback0
+ ip pim dense-mode
+ ip nat inside
+ ip virtual-reassembly in
+ encapsulation ppp
+ ip tcp header-compression
+ dialer in-band
+ dialer idle-timeout 3600
+ dialer-group 1
+ peer default ip address dhcp-pool dialup
+ async mode dedicated
+ no keepalive
+ ppp authentication pap chap
+ routing dynamic
+!
+interface Async0/1/0
+ ip unnumbered Loopback0
+ ip nat inside
+ ip virtual-reassembly in
+ encapsulation ppp
+ ip tcp header-compression
+ dialer in-band
+ dialer idle-timeout 3600
+ dialer-group 1
+ peer default ip address dhcp-pool dialup
+ async mode dedicated
+ no keepalive
+ ppp authentication pap chap
+ routing dynamic
+!
+ip forward-protocol nd
+ip http server
+no ip http secure-server
+ip http path flash:
+!
+!
+ip nat inside source list 1 interface GigabitEthernet0/0 overload
+ip route 0.0.0.0 0.0.0.0 xxx.xxx.xxx.xxx 254 (upstream router, identical to row below, I don't know why but it keeps duplicating this line every time I delete it)
+ip route 0.0.0.0 0.0.0.0 xxx.xxx.xxx.xxx 254
+ip route xxx.xxx.xxx.0 255.255.255.0 xxx.xxx.xxx.xxx (these two are subnets in the as5350)
+ip route xxx.xxx.xxx.0 255.255.255.0 xxx.xxx.xxx.xxx
+!
+access-list 1 permit xxx.xxx.xxx.0 0.0.0.255
+access-list 1 permit xxx.xxx.xxx.0 0.0.0.255
+access-list 1 permit xxx.xxx.xxx.0 0.0.0.255
+access-list 1 permit xxx.xxx.xxx.0 0.0.0.255
+dialer-list 1 protocol ip permit
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+tftp-server flash:term45.default.loads
+tftp-server flash:term65.default.loads
+tftp-server flash:apps45.9-3-1ES26.sbn
+tftp-server flash:cnu45.9-3-1ES26.sbn
+tftp-server flash:cvm45sccp.9-3-1ES26.sbn
+tftp-server flash:dsp45.9-3-1ES26.sbn
+tftp-server flash:jar45sccp.9-3-1ES26.sbn
+tftp-server flash:SCCP45.9-3-1SR4-1S.loads
+tftp-server flash:Desktops/320x212x12/LIST.XML
+tftp-server flash:Desktops/320x216x16/LIST.
+tftp-server flash:Desktops/320x216x16/LIST.XML
+tftp-server flash:Desktops/320x212x12/MouseStupid.png
+tftp-server flash:Desktops/320x212x12/TN-CampusNight.png
+tftp-server flash:Desktops/320x212x16/LIST.XML
+tftp-server flash:Desktops/320x212x12/CampusNight.png
+tftp-server flash:Desktops/320x212x12/TN-CiscoFountain.png
+tftp-server flash:Desktops/320x212x12/CiscoFountain.png
+tftp-server flash:Desktops/320x212x12/TN-Fountain.png
+tftp-server flash:Desktops/320x212x12/Fountain.png
+tftp-server flash:Desktops/320x212x12/TN-MorroRock.png
+tftp-server flash:Desktops/320x212x12/MorroRock.png
+tftp-server flash:Desktops/320x212x12/TN-NantucketFlowers.png
+tftp-server flash:Desktops/320x212x12/NantucketFlowers.png
+tftp-server flash:Desktops/320x212x12/TN-CiscoLogo.png
+tftp-server flash:Desktops/320x212x12/CiscoLogo.png
+tftp-server flash:Desktops/320x212x12/MouseCute.png
+tftp-server flash:Desktops/320x212x12/Kennen.png
+tftp-server flash:Desktops/320x212x12/Mini.png
+tftp-server flash:Desktops/320x212x12/Momma.png
+!
+!
+!
+control-plane
+!
+!
+voice-port 0/3/0:23
+!
+voice-port 0/2/0
+ description client modem in port 0
+!
+voice-port 0/2/1
+ description 3825 modem 0 in port 1
+!
+voice-port 0/2/2
+ description client modem in port 2
+!
+voice-port 0/2/3
+ description 3825 modem 1 in port 3
+!
+voice-port 1/0/0
+!
+voice-port 1/0/1
+!
+voice-port 1/0/2
+!
+voice-port 1/0/3
+!
+voice-port 1/0/4
+!
+voice-port 1/0/5
+!
+voice-port 1/0/6
+!
+voice-port 1/0/7
+!
+voice-port 1/0/8
+!
+voice-port 1/0/9
+!
+voice-port 1/0/10
+!
+voice-port 1/0/11
+!
+voice-port 1/0/12
+!
+voice-port 1/0/13
+!
+voice-port 1/0/14
+!
+voice-port 1/0/15
+!
+voice-port 1/0/16
+!
+voice-port 1/0/17
+!
+voice-port 1/0/18
+!
+voice-port 1/0/19
+!
+voice-port 1/0/20
+!
+voice-port 1/0/21
+!
+voice-port 1/0/22
+!
+voice-port 1/0/23
+!
+!
+!
+mgcp profile default
+!
+!
+dial-peer voice 10 pots
+ description modem 2nd port on WIC FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ direct-inward-dial
+ port 0/2/1
+ no sip-register (required to keep router from spamming voip.ms with requests to register the extention)
+!
+dial-peer voice 20 pots
+ description modem 4th port on WIC FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 0/2/3
+ no sip-register
+!
+dial-peer voice 30 pots
+ description T1 line for AS5350 dialup service
+ destination-pattern 2316361018
+ direct-inward-dial
+ port 0/3/0:23
+ no sip-register
+!
+dial-peer voice 40 pots
+ description 3rd port on WIC FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 0/2/2
+ no sip-register
+!
+dial-peer voice 50 pots
+ description 1st port on WIC FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 0/2/0
+ no sip-register
+!
+dial-peer voice 60 pots
+ description 1st port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/0
+ no sip-register
+!
+dial-peer voice 70 pots
+ description 2nd port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/1
+ no sip-register
+!
+dial-peer voice 80 pots
+ description 3rd port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/2
+ no sip-register
+!
+dial-peer voice 90 pots
+ description 4th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/3
+ no sip-register
+!
+dial-peer voice 100 pots
+ description 5th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/4
+ no sip-register
+!
+dial-peer voice 110 pots
+ description 6th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/5
+ no sip-register
+!
+dial-peer voice 120 pots
+ description 7th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/6
+ no sip-register
+!
+dial-peer voice 130 pots
+ description 8th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/7
+ no sip-register
+!
+dial-peer voice 140 pots
+ description 9th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/8
+ no sip-register
+!
+dial-peer voice 150 pots
+ description 10th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/9
+ no sip-register
+!
+dial-peer voice 160 pots
+ description 11th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/10
+ no sip-register
+!
+dial-peer voice 170 pots
+ description 12th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/11
+ no sip-register
+!
+dial-peer voice 180 pots
+ description 13th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/12
+ no sip-register
+!
+dial-peer voice 190 pots
+ description 14th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number 2xxx
+ port 1/0/13
+ no sip-register
+!
+dial-peer voice 200 pots
+ description 15th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/14
+ no sip-register
+!
+dial-peer voice 210 pots
+ description 16th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/15
+ no sip-register
+!
+dial-peer voice 2 voip
+ translation-profile outgoing OUTGOING_9 (strips the leading 9 off the dialed number)
+ destination-pattern 9[2-9]..[2-9]...... (catches all numbers dialed starting with 9 to direct to voip.ms)
+ session protocol sipv2
+ session target ipv4:xxx.xxx.xxx.xxx (voip.ms server ip)
+ voice-class codec 1  
+ no voice-class sip early-offer forced
+ dtmf-relay h245-alphanumeric
+ no vad
+!
+dial-peer voice 3 voip
+ translation-profile outgoing OUTGOING_9 (strips the leading 9 off the dialed number)
+ destination-pattern 91[2-9]..[2-9]...... (catches all numbers dialed starting with 91 to direct to voip.ms)
+ session protocol sipv2
+ session target ipv4:xxx.xxx.xxx.xxx (voip.ms server ip)
+ voice-class codec 1  
+ no voice-class sip early-offer forced
+ dtmf-relay rtp-nte cisco-rtp sip-kpml sip-notify
+ no vad
+!
+dial-peer voice 1 voip
+ description VOIPMS_INBOUND
+ session protocol sipv2
+ session target sip-server
+ incoming called-number xxxxxxxxxx (one of the voip.ms numbers that calls into this cisco)
+ voice-class codec 1  
+ dtmf-relay cisco-rtp rtp-nte
+ no vad
+!
+dial-peer voice 220 pots
+ description 17th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/16
+ no sip-register
+!
+dial-peer voice 230 pots
+ description 18th port on NM FXS card
+ destination-pattern 2696494834
+ incoming called-number 2696494834
+ port 1/0/17
+ no sip-register
+!
+dial-peer voice 240 pots
+ description 19th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/18
+ no sip-register
+!
+dial-peer voice 250 pots
+ description 20th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/19
+ no sip-register
+!
+dial-peer voice 260 pots
+ description 21st port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/20
+ no sip-register
+!
+dial-peer voice 270 pots
+ description 22nd port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/21
+ no sip-register
+!
+dial-peer voice 280 pots
+ description 23rd port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/22
+ no sip-register
+!
+dial-peer voice 290 pots
+ description 24th port on NM FXS card
+ destination-pattern xxx
+ incoming called-number xxx
+ port 1/0/23
+ no sip-register
+!
+dial-peer voice 4 voip
+ description VOIPMS_INBOUND_DIALUP
+ session protocol sipv2
+ session target sip-server
+ incoming called-number 2316361018 (voip.ms number that is directed to the AS5350)
+ voice-class codec 1  
+ dtmf-relay cisco-rtp rtp-nte
+ no vad
+!
+dial-peer voice 300 pots
+ description Priviledged Dialup Access to AS5350
+ destination-pattern xxx (internal number that is also directed to AS5350)
+ direct-inward-dial
+ port 0/3/0:23
+ no sip-register
+!
+!
+sip-ua 
+ credentials username xxx password 7 xxx realm chicago1.voip.ms
+ authentication username xxx password 7 xxx realm chicago1.voip.ms
+ registrar 1 dns:xxx expires 300
+!
+!
+!
+telephony-service
+ max-ephones 185
+ max-dn 500
+ ip source-address xxx.xxx.xxx.xxx port 2000 (this router's IP)
+ service phone displayOnTime 08:00 (By default the IP Phones keep the screens on constantly from 9am to 5pm, this sets cisco IP phones to turn on screen automatically at 8am instead)
+ service phone displayOnDuration 00:10 (screen turns off automatically at 8:10am)
+ service phone displayIdleTimeout 00:10 (screen will turn on when phone is interacted with, and will shut off automatically after 10 minutes outside of 8am to 8:10am)
+ service phone displayOnWhenIncomingCall 1 (turns display on when call incoming)
+ url directories http://xxx.xxx.xxx.xxx/localdirectory (also this router's IP)
+ load 7965 SCCP45.9-3-1SR4-1S
+ time-zone 12
+ max-conferences 12 gain -6
+ moh mohlong.wav
+ multicast moh 239.1.1.1 port 16384
+ transfer-system full-consult
+ create cnf-files version-stamp 7960 Jan 02 2006 07:00:31
+!
+!
+ephone-dn  1
+ number xxx secondary xxx no-reg both (secondary number is incoming number from voip.ms)
+ description xxx
+ name xxx xxx
+!
+!
+ephone-dn  2
+ number xxx no-reg primary (no-reg required to keep router from trying to register extention number with voip.ms)
+ description xxx
+ name xxx xxx
+!
+!
+ephone-dn  3
+ number xxx no-reg primary
+ description Kitchen
+ name Kitchen
+!
+!
+ephone-dn  4
+ number xxx no-reg primary
+ description Library
+ name Library
+!
+!
+ephone-dn  5
+ number xxx no-reg primary
+ description Storage
+ name Storage
+!
+!
+ephone-dn  6
+ number xxx no-reg primary
+ description Barn
+ name Barn
+!
+!
+ephone-dn  7
+ number xxx no-reg primary (initially had this configured with the pizzatel dialup number as secondary, but calls would go here first and it wasn't really necessary anyway, so not used anymore, just haven't deleted yet)
+ description External Dialup
+ name External Dialup
+!
+!
+ephone  1
+ device-security-mode none
+ description xxx
+ mac-address x.C442.D415
+ type 7965
+ button  1:1 2:7
+!
+!
+!
+ephone  2
+ device-security-mode none
+ mac-address x.A984.D575
+ type 7965
+ button  1:2
+!
+!
+!
+ephone  3
+ device-security-mode none
+ mac-address x.4841.B3CE
+ type 7965
+ button  1:3
+!
+!
+!
+ephone  4
+ device-security-mode none
+ mac-address x.C442.D11D
+ type 7965
+ button  1:4
+!
+!
+!
+ephone  5
+ device-security-mode none
+ mac-address x.D41E.BCF1
+ type 7965
+ button  1:5
+!
+!
+!
+ephone  6
+ device-security-mode none
+ mac-address x.EBC6.934B
+ type 7965
+ button  1:6
+!
+!
+!
+!
+line con 0
+line aux 0
+line 0/0/0
+ modem Dialin
+ modem autoconfigure type default
+ transport input all
+ autoselect ppp
+ stopbits 1
+ speed 115200
+ flowcontrol hardware
+line 0/1/0
+ modem Dialin
+ modem autoconfigure type default
+ transport input all
+ autoselect ppp
+ stopbits 1
+ speed 115200
+ flowcontrol hardware
+line vty 0 4
+ transport input all
+!
+scheduler allocate 20000 1000
+ntp server 162.159.200.1
+end
